@@ -1,0 +1,25 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/universal:2",
+    "features": {
+      "ghcr.io/devcontainers/features/rust:1": {}
+    },
+    "hostRequirements": {
+      "cpus": 2
+    },
+    "customizations": {
+      "codespaces": {
+        "openFiles": [
+          "src/main.rs"
+        ]
+      },
+      "vscode": {
+        "extensions": [
+          "rust-lang.rust-analyzer",
+          "github.copilot",
+          "github.copilot-chat",
+          "gruntfuggly.todo-tree"
+        ]
+      }
+    },
+    "postCreateCommand": "rustup target add thumbv6m-none-eabi"
+}
