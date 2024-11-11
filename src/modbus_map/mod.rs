@@ -1,24 +1,32 @@
-use embassy_sync::blocking_mutex::Mutex;
-use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-//use embassy_sync::channel::signal::Signal;
-//use embassy_futures::util::Forever;
 
-const NUM_COILS: usize = 64;
-const NUM_DISCRETE_INPUTS: usize = 64;
-const NUM_HOLDING_REGISTERS: usize = 32;
-const NUM_INPUT_REGISTERS: usize = 32;
+#[macro_export]
+macro_rules! modbus_map {
+    ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
 
-#[derive(Default)]
-struct ModbusMap {
-    coils: [bool; NUM_COILS],
-    discrete_inputs: [bool; NUM_DISCRETE_INPUTS],
-    holding_registers: [u16; NUM_HOLDING_REGISTERS],
-    input_registers: [u16; NUM_INPUT_REGISTERS],
+        use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+        use embassy_sync::channel::Channel;
+
+        const NUM_COILS: usize = $num_coils;
+        const NUM_DISCRETE_INPUTS: usize = $num_discrete_inputs;
+        const NUM_HOLDING_REGISTERS: usize = $num_holding_registers;
+        const NUM_INPUT_REGISTERS: usize = $num_input_registers;
+
+        struct ModbusMap {
+            coils: [bool; NUM_COILS],
+            discrete_inputs: [bool; NUM_DISCRETE_INPUTS],
+            holding_registers: [u16; NUM_HOLDING_REGISTERS],
+            input_registers: [u16; NUM_INPUT_REGISTERS],
+        }
+
+        static MODBUS_CHANNEL: Channel<CriticalSectionRawMutex, ModbusMap, 2> = Channel::new();
+
+        async fn update_coil(index: usize, value: bool) {
+            let mut modbus_map = MODBUS_CHANNEL.receive().await;
+            if index < NUM_COILS {
+                modbus_map.coils[index] = value;
+            }
+            MODBUS_CHANNEL.send(modbus_map).await;
+        }
+    };
 }
 
-static MODBUS_MAP: Forever<Mutex<ThreadModeRawMutex, ModbusMap>> = Forever::new();
-//static MAP_UPDATE_SIGNAL: Signal<()> = Signal::new();
-
-fn init_modbus_map() -> &'static Mutex<ThreadModeRawMutex, ModbusMap> {
-    MODBUS_MAP.put(Mutex::new(ModbusMap::default()))
-}
