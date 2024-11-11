@@ -1,5 +1,5 @@
 [package]
-name = "uamp-modbus-rtu-embbeded-rs"
+name = "embedded-modbus-rs"
 authors = ["Marco Rodriguez Bosco marco.bosco@uamp.io"]
 version = "0.1.0"
 edition = "2021"
