@@ -19,7 +19,8 @@
           "github.copilot-chat",
           "gruntfuggly.todo-tree",
           "usernamehw.errorlens",
-          "tamasfe.even-better-toml"
+          "tamasfe.even-better-toml",
+          "fill-labs.dependi"
         ]
       }
     },
