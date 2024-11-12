@@ -18,15 +18,17 @@ macro_rules! modbus_map {
             input_registers: [u16; NUM_INPUT_REGISTERS],
         }
 
-        static MODBUS_CHANNEL: Channel<CriticalSectionRawMutex, ModbusMap, 2> = Channel::new();
-
-        async fn update_coil(index: usize, value: bool) {
-            let mut modbus_map = MODBUS_CHANNEL.receive().await;
-            if index < NUM_COILS {
-                modbus_map.coils[index] = value;
+        impl ModbusMap {
+            async fn update_coil(index: usize, value: bool) {
+                let mut modbus_map = MODBUS_CHANNEL.receive().await;
+                if index < NUM_COILS {
+                    modbus_map.coils[index] = value;
+                }
+                MODBUS_CHANNEL.send(modbus_map).await;
             }
-            MODBUS_CHANNEL.send(modbus_map).await;
         }
+
+        static MODBUS_CHANNEL: Channel<CriticalSectionRawMutex, ModbusMap, 2> = Channel::new();
     };
 }
 
