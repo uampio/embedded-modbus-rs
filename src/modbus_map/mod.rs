@@ -1,8 +1,6 @@
-
 #[macro_export]
 macro_rules! modbus_map {
     ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
-
         use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
         use embassy_sync::channel::Channel;
 
@@ -18,20 +16,41 @@ macro_rules! modbus_map {
             input_registers: [u16; NUM_INPUT_REGISTERS],
         }
 
-        impl ModbusMap {
+        struct Modbus {
+            modbus_map: ModbusMap,
+            channel: Channel<CriticalSectionRawMutex, ModbusMap, 2>,
+        }
 
-            // Coils
-
-            async fn update_coil(index: usize, value: bool) {
-                let mut modbus_map = MODBUS_CHANNEL.receive().await;
-                if index < NUM_COILS {
-                    modbus_map.coils[index] = value;
-                }
-                MODBUS_CHANNEL.send(modbus_map).await;
+        impl Modbus {
+            // Create a new instance of ModbusMap and initialize the channel
+            fn new() -> Self {
+                let modbus_map = ModbusMap {
+                    coils: [false; NUM_COILS],
+                    discrete_inputs: [false; NUM_DISCRETE_INPUTS],
+                    holding_registers: [0; NUM_HOLDING_REGISTERS],
+                    input_registers: [0; NUM_INPUT_REGISTERS],
+                };
+                let modbus = Modbus {
+                    modbus_map,
+                    channel: Channel::new(),
+                };
+                modbus
             }
 
-            async fn read_coil(index: usize) -> Option<bool> {
-                let modbus_map = MODBUS_CHANNEL.receive().await;
+            // Coils
+            async fn update_coil(&self, index: usize, value: bool) {
+                info!("0 - Coil updated");
+                let mut modbus_map = self.channel.receive().await;
+                if index < NUM_COILS {
+                    info!("1 - Coil updated");
+                    modbus_map.coils[index] = value;
+                }
+                info!("2 - Coil updated");
+                self.channel.send(modbus_map).await;
+            }
+
+            async fn read_coil(&self, index: usize) -> Option<bool> {
+                let modbus_map = self.channel.receive().await;
                 if index < NUM_COILS {
                     Some(modbus_map.coils[index])
                 } else {
@@ -39,19 +58,26 @@ macro_rules! modbus_map {
                 }
             }
 
-            async fn get_all_coils() -> [bool; NUM_COILS] {
-                let modbus_map = MODBUS_CHANNEL.receive().await;
+            async fn get_all_coils(&self) -> [bool; NUM_COILS] {
+                let modbus_map = self.channel.receive().await;
                 modbus_map.coils
             }
 
-            async fn update_all_coils(new_coils: [bool; NUM_COILS]) {
-                let mut modbus_map = MODBUS_CHANNEL.receive().await;
+            async fn update_all_coils(&self, new_coils: [bool; NUM_COILS]) {
+                let mut modbus_map = self.channel.receive().await;
                 modbus_map.coils = new_coils;
-                MODBUS_CHANNEL.send(modbus_map).await;
+                self.channel.send(modbus_map).await;
+            }
+
+            async fn init_modbus_channel(&self) {
+                let initial_modbus_map = ModbusMap {
+                    coils: [false; NUM_COILS],
+                    discrete_inputs: [false; NUM_DISCRETE_INPUTS],
+                    holding_registers: [0; NUM_HOLDING_REGISTERS],
+                    input_registers: [0; NUM_INPUT_REGISTERS],
+                };
+                self.channel.send(initial_modbus_map).await;
             }
         }
-
-        static MODBUS_CHANNEL: Channel<CriticalSectionRawMutex, ModbusMap, 2> = Channel::new();
     };
 }
-
