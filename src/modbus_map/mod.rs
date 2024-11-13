@@ -19,11 +19,34 @@ macro_rules! modbus_map {
         }
 
         impl ModbusMap {
+
+            // Coils
+
             async fn update_coil(index: usize, value: bool) {
                 let mut modbus_map = MODBUS_CHANNEL.receive().await;
                 if index < NUM_COILS {
                     modbus_map.coils[index] = value;
                 }
+                MODBUS_CHANNEL.send(modbus_map).await;
+            }
+
+            async fn read_coil(index: usize) -> Option<bool> {
+                let modbus_map = MODBUS_CHANNEL.receive().await;
+                if index < NUM_COILS {
+                    Some(modbus_map.coils[index])
+                } else {
+                    None
+                }
+            }
+
+            async fn get_all_coils() -> [bool; NUM_COILS] {
+                let modbus_map = MODBUS_CHANNEL.receive().await;
+                modbus_map.coils
+            }
+
+            async fn update_all_coils(new_coils: [bool; NUM_COILS]) {
+                let mut modbus_map = MODBUS_CHANNEL.receive().await;
+                modbus_map.coils = new_coils;
                 MODBUS_CHANNEL.send(modbus_map).await;
             }
         }
