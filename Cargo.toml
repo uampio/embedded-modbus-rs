@@ -48,5 +48,6 @@ rand = { version = "0.8.5", default-features = false }
 embedded-sdmmc = "0.8.1"
 
 bt-hci = { version = "0.1.0", default-features = false, features = ["defmt"] }
+modbus-core = "0.1.0"
 
 

@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! modbus_data {
+macro_rules! modbus {
     ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
         use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
         use embassy_sync::channel::Channel;
