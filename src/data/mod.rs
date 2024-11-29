@@ -1,27 +1,27 @@
 #[macro_export]
-macro_rules! modbus {
+macro_rules! modbus_map {
     ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
-        use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-        use embassy_sync::channel::Channel;
+        use $crate::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+        use $crate::embassy_sync::channel::Channel;
 
-        const NUM_COILS: usize = $num_coils;
-        const NUM_DISCRETE_INPUTS: usize = $num_discrete_inputs;
-        const NUM_HOLDING_REGISTERS: usize = $num_holding_registers;
-        const NUM_INPUT_REGISTERS: usize = $num_input_registers;
+        pub const NUM_COILS: usize = $num_coils;
+        pub const NUM_DISCRETE_INPUTS: usize = $num_discrete_inputs;
+        pub const NUM_HOLDING_REGISTERS: usize = $num_holding_registers;
+        pub const NUM_INPUT_REGISTERS: usize = $num_input_registers;
 
-        struct ModbusData {
+        pub struct ModbusData {
             coils: [bool; NUM_COILS],
             discrete_inputs: [bool; NUM_DISCRETE_INPUTS],
             holding_registers: [u16; NUM_HOLDING_REGISTERS],
             input_registers: [u16; NUM_INPUT_REGISTERS],
         }
 
-        struct Modbus {
+        pub struct ModbusMap {
             modbus_data: ModbusData,
             channel: Channel<CriticalSectionRawMutex, ModbusData, 2>,
         }
 
-        impl Modbus {
+        impl ModbusMap {
             // Create a new instance of ModbusData and initialize the channel
             fn new() -> Self {
                 let modbus_data = ModbusData {
@@ -30,7 +30,7 @@ macro_rules! modbus {
                     holding_registers: [0; NUM_HOLDING_REGISTERS],
                     input_registers: [0; NUM_INPUT_REGISTERS],
                 };
-                let modbus = Modbus {
+                let modbus = ModbusMap {
                     modbus_data,
                     channel: Channel::new(),
                 };
