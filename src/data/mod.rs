@@ -1,83 +1,69 @@
 #[macro_export]
 macro_rules! modbus_map {
     ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
-        use $crate::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-        use $crate::embassy_sync::channel::Channel;
+        use $crate::embassy_sync::blocking_mutex::raw::NoopRawMutex;
+        use $crate::embassy_sync::zerocopy_channel::{Channel, Receiver, Sender};
+        use $crate::embassy_sync::mutex::Mutex; // Use NoopRawMutex for single-core systems
+        use $crate::core::result::Result;
+        use $crate::defmt::*;
 
         pub const NUM_COILS: usize = $num_coils;
         pub const NUM_DISCRETE_INPUTS: usize = $num_discrete_inputs;
         pub const NUM_HOLDING_REGISTERS: usize = $num_holding_registers;
         pub const NUM_INPUT_REGISTERS: usize = $num_input_registers;
 
-        pub struct ModbusData {
+        struct ModbusData {
             coils: [bool; NUM_COILS],
             discrete_inputs: [bool; NUM_DISCRETE_INPUTS],
             holding_registers: [u16; NUM_HOLDING_REGISTERS],
             input_registers: [u16; NUM_INPUT_REGISTERS],
         }
 
-        pub struct ModbusMap {
-            modbus_data: ModbusData,
-            channel: Channel<CriticalSectionRawMutex, ModbusData, 2>,
-        }
-
-        impl ModbusMap {
+        impl ModbusData {
             // Create a new instance of ModbusData and initialize the channel
-            fn new() -> Self {
-                let modbus_data = ModbusData {
-                    coils: [false; NUM_COILS],
-                    discrete_inputs: [false; NUM_DISCRETE_INPUTS],
-                    holding_registers: [0; NUM_HOLDING_REGISTERS],
-                    input_registers: [0; NUM_INPUT_REGISTERS],
-                };
-                let modbus = ModbusMap {
-                    modbus_data,
-                    channel: Channel::new(),
-                };
-                modbus
+            fn new(modbus_data: ModbusData) -> Self {
+                modbus_data
             }
+        
 
-            // Coils
-            async fn update_coil(&self, index: usize, value: bool) {
-                info!("0 - Coil updated");
-                let mut modbus_data = self.channel.receive().await;
+            fn update_coil(&mut self, index: usize, value: bool) -> Result<(), u8> {
                 if index < NUM_COILS {
-                    info!("1 - Coil updated");
-                    modbus_data.coils[index] = value;
-                }
-                info!("2 - Coil updated");
-                self.channel.send(modbus_data).await;
-            }
-
-            async fn read_coil(&self, index: usize) -> Option<bool> {
-                let modbus_data = self.channel.receive().await;
-                if index < NUM_COILS {
-                    Some(modbus_data.coils[index])
+                    self.coils[index] = value;
+                    //info!("Coil index: {:?} updated to {:?}", index, value);
+                    Ok(())
                 } else {
-                    None
+                    //info!("Coil index: {:?} out of range. Not updated", index);
+                    Err(1)// Invalid coil index returns 1
                 }
             }
 
-            async fn get_all_coils(&self) -> [bool; NUM_COILS] {
-                let modbus_data = self.channel.receive().await;
-                modbus_data.coils
+            fn read_coil(&self, index: usize, value: bool) -> Result<bool, u8> {
+                if index < NUM_COILS {
+                    Ok(self.coils[index])
+                } else {
+                    Err(1) // Invalid coil index returns 1
+                }
             }
 
-            async fn update_all_coils(&self, new_coils: [bool; NUM_COILS]) {
-                let mut modbus_data = self.channel.receive().await;
-                modbus_data.coils = new_coils;
-                self.channel.send(modbus_data).await;
+            fn update_holding_register(&mut self, index: usize, value: u16) -> Result<(), u8> {
+                if index < NUM_HOLDING_REGISTERS {
+                    self.holding_registers[index] = value;
+                    //info!("Holding register index: {:?} updated to {:?}", index, value);
+                    Ok(())
+                } else {
+                    //info!("Holding register index: {:?} out of range. Not updated", index);
+                    Err(1) // Invalid holding register index returns 1
+                }
             }
 
-            async fn init_modbus_channel(&self) {
-                let initial_modbus_data = ModbusData {
-                    coils: [false; NUM_COILS],
-                    discrete_inputs: [false; NUM_DISCRETE_INPUTS],
-                    holding_registers: [0; NUM_HOLDING_REGISTERS],
-                    input_registers: [0; NUM_INPUT_REGISTERS],
-                };
-                self.channel.send(initial_modbus_data).await;
+            fn read_holding_register(&self, index: usize) -> Result<u16, u8> {
+                if index < NUM_HOLDING_REGISTERS {
+                    Ok(self.holding_registers[index])
+                } else {
+                    Err(1) // Invalid holding register index returns 1
+                }
             }
         }
+        
     };
 }
