@@ -3,12 +3,16 @@ macro_rules! modbus_rtu_server {
     ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
         use $crate::modbus_core::rtu::{server, ResponseAdu, Header};
         use $crate::modbus_core::{Request, Response, ResponsePdu, Data, Exception};
+        use $crate::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+        use $crate::embassy_sync::channel::Channel;
         use $crate::defmt::*;
         use {defmt_rtt as _, panic_probe as _};
 
         use $crate::modbus_map;
 
         modbus_map!($num_coils, $num_discrete_inputs, $num_holding_registers, $num_input_registers);
+
+        static MODBUS_CHANNEL: Channel<CriticalSectionRawMutex, ModbusData, 1> = Channel::new();
 
         struct ModbusRTUServer {
             id: u8,
@@ -27,6 +31,13 @@ macro_rules! modbus_rtu_server {
                         input_registers: [0; NUM_INPUT_REGISTERS],
                     }),
                 }
+            }
+
+            async fn read_data(&mut self) {
+                if MODBUS_CHANNEL.is_empty() {
+                    return;
+                }
+                self.modbus_data = MODBUS_CHANNEL.receive().await;
             }
 
             fn decode_serial_buffer(&self, buf_input: &[u8], buffer_ouput: &mut [u8]) -> Result<(bool, usize), u8> {
@@ -62,13 +73,13 @@ macro_rules! modbus_rtu_server {
                                             };
 
                                         } else {
-                                            data_response = Data::from_words(
-                                                &self.modbus_data.holding_registers[address as usize..(address + quantity) as usize],
-                                                &mut buffer
-                                            ).map_err(|_| 550)?;
-                                            adu = ResponseAdu {
-                                                hdr: Header { slave: self.id },
-                                                pdu: ResponsePdu(Ok(Response::ReadHoldingRegisters(data_response))),
+                                             data_response = Data::from_words(
+                                                 &self.modbus_data.holding_registers[address as usize..(address + quantity) as usize],
+                                                 &mut buffer
+                                             ).map_err(|_| 550)?;
+                                             adu = ResponseAdu {
+                                                 hdr: Header { slave: self.id },
+                                                 pdu: ResponsePdu(Ok(Response::ReadHoldingRegisters(data_response))),
                                             };
                                         };
 

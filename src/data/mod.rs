@@ -1,9 +1,7 @@
 #[macro_export]
 macro_rules! modbus_map {
     ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
-        use $crate::embassy_sync::blocking_mutex::raw::NoopRawMutex;
-        use $crate::embassy_sync::zerocopy_channel::{Channel, Receiver, Sender};
-        use $crate::embassy_sync::mutex::Mutex; // Use NoopRawMutex for single-core systems
+        // Use NoopRawMutex for single-core systems
         use $crate::core::result::Result;
         use $crate::defmt::*;
 
@@ -23,8 +21,7 @@ macro_rules! modbus_map {
             // Create a new instance of ModbusData and initialize the channel
             fn new(modbus_data: ModbusData) -> Self {
                 modbus_data
-            }
-        
+            }      
 
             fn update_coil(&mut self, index: usize, value: bool) -> Result<(), u8> {
                 if index < NUM_COILS {
