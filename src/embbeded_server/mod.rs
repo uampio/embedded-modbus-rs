@@ -2,10 +2,10 @@
 macro_rules! modbus_rtu_server {
     ($num_coils:expr, $num_discrete_inputs:expr, $num_holding_registers:expr, $num_input_registers:expr) => {
         use $crate::modbus_core::rtu::{server, ResponseAdu, Header};
-        use $crate::modbus_core::{Request, Response, ResponsePdu, Data};
+        use $crate::modbus_core::{Request, Response, ResponsePdu, Data, Exception};
         use $crate::defmt::*;
-
         use {defmt_rtt as _, panic_probe as _};
+
         use $crate::modbus_map;
 
         modbus_map!($num_coils, $num_discrete_inputs, $num_holding_registers, $num_input_registers);
@@ -51,18 +51,27 @@ macro_rules! modbus_rtu_server {
                                         return Ok((false, 0));
                                     }
                                     Request::ReadHoldingRegisters (address, quantity) => {
-                                        info!("Function: Read Holding Registers. Address: {:?}, Quantity: {:?}", address, quantity);
-                                        info!("Result {:?}", self.modbus_data.read_holding_register(address as usize).unwrap());
                                         // Handle Read Holding Registers request
                                         let mut buffer: [u8; 255] = [0; 255];
-                                        let data_response = Data::from_words(
-                                            &self.modbus_data.holding_registers[address as usize..(address + quantity) as usize],
-                                            &mut buffer
-                                        ).map_err(|_| 550)?;
-                                        let adu = ResponseAdu {
-                                            hdr: Header { slave: self.id },
-                                            pdu: ResponsePdu(Ok(Response::ReadHoldingRegisters(data_response))),
+                                        let mut adu : ResponseAdu;
+                                        let mut data_response : Data;
+                                        if address + quantity > NUM_HOLDING_REGISTERS as u16 {
+                                            adu = ResponseAdu {
+                                                hdr: Header { slave: self.id },
+                                                pdu: ResponsePdu(Ok(Response::ReadExceptionStatus(Exception::IllegalDataAddress as u8))),
+                                            };
+
+                                        } else {
+                                            data_response = Data::from_words(
+                                                &self.modbus_data.holding_registers[address as usize..(address + quantity) as usize],
+                                                &mut buffer
+                                            ).map_err(|_| 550)?;
+                                            adu = ResponseAdu {
+                                                hdr: Header { slave: self.id },
+                                                pdu: ResponsePdu(Ok(Response::ReadHoldingRegisters(data_response))),
+                                            };
                                         };
+
                                         match server::encode_response(adu, buffer_ouput) {
                                             Ok(buffer_zie) => {
                                                 info!("Response encoded");

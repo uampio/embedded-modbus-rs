@@ -48,7 +48,8 @@ defmt-rtt = "0.4"
 # embedded-sdmmc = "0.8.1"
 
 #bt-hci = { version = "0.1.0", default-features = false, features = ["defmt"] }
-modbus-core = "0.1.0"
+modbus-core = { git = "https://github.com/uampio/modbus-core.git", branch = "master", features = ["rtu"], default-features = false }
 
 
+#modbus-core = { version = "0.1.0", features = ["rtu"], default-features = false }
 
