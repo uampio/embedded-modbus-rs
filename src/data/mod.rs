@@ -17,6 +17,16 @@ macro_rules! modbus_map {
             input_registers: [u16; NUM_INPUT_REGISTERS],
         }
 
+        // Implement the Copy trait for ModbusData
+        impl Copy for ModbusData {}
+
+        // Implement the Clone trait for ModbusData
+        impl Clone for ModbusData {
+            fn clone(&self) -> ModbusData {
+                *self
+            }
+        }
+
         impl ModbusData {
             // Create a new instance of ModbusData and initialize the channel
             fn new(modbus_data: ModbusData) -> Self {

@@ -12,8 +12,6 @@ macro_rules! modbus_rtu_server {
 
         modbus_map!($num_coils, $num_discrete_inputs, $num_holding_registers, $num_input_registers);
 
-        static MODBUS_CHANNEL: Channel<CriticalSectionRawMutex, ModbusData, 1> = Channel::new();
-
         struct ModbusRTUServer {
             id: u8,
             modbus_data: ModbusData,
@@ -33,17 +31,20 @@ macro_rules! modbus_rtu_server {
                 }
             }
 
-            async fn read_data(&mut self) {
-                if MODBUS_CHANNEL.is_empty() {
-                    return;
-                }
-                self.modbus_data = MODBUS_CHANNEL.receive().await;
+            async fn server_init_blocking (&mut self, channel_app_to_server: &'static Channel<CriticalSectionRawMutex, ModbusData, 1>) {
+                self.modbus_data = channel_app_to_server.receive().await;
             }
 
-            fn decode_serial_buffer(&self, buf_input: &[u8], buffer_ouput: &mut [u8]) -> Result<(bool, usize), u8> {
+            async fn read_data(&mut self, channel_app_to_server: &'static Channel<CriticalSectionRawMutex, ModbusData, 1>) {
+                if channel_app_to_server.is_full() {
+                    self.modbus_data = channel_app_to_server.receive().await;
+                }
+            }
+
+            fn decode_serial_buffer(&self, buf_input: &[u8], buffer_ouput: &mut [u8], channel_app_to_server: &'static Channel<CriticalSectionRawMutex, ModbusData, 1>) -> Result<(bool, usize), u8> {
                 match server::decode_request(buf_input) {
                     Ok(Some(request)) => {
-                        info!("ID slave target: {:?}", request.hdr.slave);
+                        //info!("ID slave target: {:?}", request.hdr.slave);
                         if request.hdr.slave == self.id {
 
                                 match request.pdu.0 {
@@ -85,7 +86,7 @@ macro_rules! modbus_rtu_server {
 
                                         match server::encode_response(adu, buffer_ouput) {
                                             Ok(buffer_zie) => {
-                                                info!("Response encoded");
+                                                //info!("Response encoded");
                                                 return Ok((true, buffer_zie));
                                             }
                                             Err(e) => {
