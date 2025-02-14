@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 
 #embassy-embedded-hal = { version = "0.2.0", features = ["defmt"] }
-embassy-sync = { version = "0.6.0", features = ["defmt"] }
+embassy-sync = { version = "0.6.2", features = ["defmt"] }
 #embassy-executor = { version = "0.6.2", features = ["task-arena-size-98304", "arch-cortex-m", "executor-thread", "executor-interrupt", "defmt", "integrated-timers"] } 
 #embassy-time = { version = "0.3.2", features = ["defmt", "defmt-timestamp-uptime"] }
 #embassy-rp = { version ="0.2.0", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl"] }
@@ -49,7 +49,6 @@ defmt-rtt = "0.4"
 
 #bt-hci = { version = "0.1.0", default-features = false, features = ["defmt"] }
 modbus-core = { git = "https://github.com/uampio/modbus-core.git", branch = "master", features = ["rtu"], default-features = false }
-
 
 #modbus-core = { version = "0.1.0", features = ["rtu"], default-features = false }
 
